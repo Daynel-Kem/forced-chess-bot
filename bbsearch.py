@@ -4,9 +4,9 @@ from typing import List, Optional
 from transposition import Transposition_Table
 import time
 
+from evaluate import evaluate, PIECE_VALUES
 from forced_capture import forced_legal_moves
 from transposition import Transposition_Table
-from evaluate import evaluate
 
 TT = Transposition_Table(size=100000)
 
@@ -22,11 +22,12 @@ class SearchResult:
 # Max Player = True means the player is playing White pieces
 # Max Player = False means the player is playing Black pieces
 
-def minimax(board: chess.Board, depth, alpha, beta, max_player):
-    # Transposition Table Logic
-    alpha_orig = alpha
-    beta_orig = beta
+TT = Transposition_Table(size=2000000)
 
+# Max Player = True means the player is playing White pieces
+# Max Player = False means the player is playing Black pieces
+def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root):
+    # Transposition Table Logic
     entry = TT.lookup(board)
     if entry and entry.depth >= depth:
         if entry.flag == "EXACT":
@@ -47,7 +48,7 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player):
         m_eval = -float("inf")
         for move in forced_legal_moves(board):
             board.push(move)
-            evaluation = minimax(board, depth - 1, alpha, beta, False)
+            evaluation = minimax(board, depth - 1, alpha, beta, False, depth_from_root+1)
             board.pop()
 
             m_eval = max(m_eval, evaluation)
@@ -59,7 +60,7 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player):
         m_eval = float("inf")
         for move in forced_legal_moves(board):
             board.push(move)
-            evaluation = minimax(board, depth - 1, alpha, beta, True)
+            evaluation = minimax(board, depth - 1, alpha, beta, True, depth_from_root+1)
             board.pop()
 
             m_eval = min(m_eval, evaluation)
@@ -67,19 +68,19 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player):
             if beta <= alpha:
                 break
     
-    if m_eval <= alpha_orig:
+    if m_eval <= alpha:
         flag = "UPPERBOUND"
-    elif m_eval >= beta_orig:
+    elif m_eval >= beta:
         flag = "LOWERBOUND"
     else:
         flag = "EXACT"
 
-    TT.store(board, depth, m_eval, flag, best_move=None)
+    TT.store(board, depth_from_root, m_eval, flag, best_move=None)
 
     return m_eval
     
     
-def iterative_deepening(board: chess.Board, max_depth: int = 50, 
+def iterative_deepening(self, board: chess.Board, max_depth: int = 50, 
 						time_limit:float = None):
 						
 	start_time = time.time()
@@ -116,10 +117,8 @@ def iterative_deepening(board: chess.Board, max_depth: int = 50,
 			
 		moves = list(forced_legal_moves(board))
 		if moves:
-			def move_score(mv):
-				entry = TT.lookup(board)
-				return entry.score if entry else -999999
-			best_move = max(moves, key=move_score)
+			best_move = max(moves. key = lambda mv: TT.lookup(board, mv).score if
+								TT.lookup(board, mv) else -999999)
 		else:
 			best_move = None
 			
@@ -199,7 +198,7 @@ def order_moves(board: chess.Board, moves: List[chess.Move],
 	tt_entry = TT.lookup(board)
 	tt_move = tt_entry.best_move if tt_entry else None
 	
-	def score(move: chess.Move) -> Int:
+	def score(move: chess.Move) -> int:
 		s = 0
 		if pv_move is not None and move == pv_move:
 			return 2_000_000
