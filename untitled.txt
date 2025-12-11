@@ -3,9 +3,20 @@ from evaluate import evaluate
 from transposition import Transposition_Table
 from forced_chess import forced_legal_moves
 
+from evaluate import evaluate, PIECE_VALUES
+from forced_capture import get_legal_moves_with_forced_capture
+from transposition import Transposition_Table
+
 TT = Transposition_Table(size=100000)
 
-sqSshaskahksjahjsk
+@dataclass
+class SearchResult:
+    best_move: Optional[chess.Move]
+    score: int
+    depth: int
+    nodes_searched: int
+    time_taken: float
+    pv: List[chess.Move]
 
 # Max Player = True means the player is playing White pieces
 # Max Player = False means the player is playing Black pieces
@@ -98,7 +109,7 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player):
         		
         	moves = list(forced_legal_moves(board))
 			if moves:
-				best _move = max(moves. key = lambda mv: TT.lookup(board, mv).score if
+				best_move = max(moves. key = lambda mv: TT.lookup(board, mv).score if
 								 TT.lookup(board, mv) else -999999)
 			else:
 				best_move = None
