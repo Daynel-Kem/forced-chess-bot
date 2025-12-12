@@ -95,7 +95,55 @@ def capture_chain_value(board: chess.Board):
 
 
 def pawn_structure_value(board: chess.Board):
-
+	score = 0
+	
+	white_pawns = board.pieces(chess.PAWN, chess.WHITE)
+	black_pawns = board.piece(chess.PAWN, chess.BLACK)
+	
+	def file_counts(pawns):
+		counts = {}
+		for sq in pawns:
+			f = chess.square_file(sq)
+			counts[f] = counts.get(f, 0) + 1
+		return counts
+		
+	wp = file_counts(white_pawns)
+	bp = file_counts(black_pawns)
+	
+	for f, cnt in wp.items():
+		if cnt > 1:
+			score -= 10 * (cnt - 1)
+	for f, cnt in bp.items():
+		if cnt > 1:
+			score += 10 * (cnt - 1)
+		
+	def is_isolated(files, f):
+		return (f - 1 not in files) and (f + 1 not in files)
+		
+	def is_connected(files, f):
+		return (f - 1 in files) or (f + 1 in files)
+		
+	for sq in white_pawns:
+		f = chess.sqaure_file(sq)
+		if is_isolated(wp, f):
+			score -= 12
+	
+	for sq in black_pawns:
+		f = chess.square_file(sq)
+		if is_isolated(bp, f):
+			score += 12
+			
+	for sq in white_pawns:
+		f = chess.sqaure_file(sq)
+		if is_connected(wp, f):
+			score += 6
+			
+	for sq in black_pawns:
+		f = chess.square_file(sq)
+		if is_connected(bp, f):
+			score -= 6
+	
+	return score
     pass
 
 
