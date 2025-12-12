@@ -55,14 +55,47 @@ def king_safety_value(board: chess.Board):
 
 
 def mobility_value(board: chess.Board):
+	legal_move = list(board.legal_moves):
+	capture_move = 0
+	
+	for move in legal_moves:
+		if board.is_capture(move):
+			capture_move += 1
+		if capture_move > 0:
+			mobility = capture_moves
+		else:
+			mobility = len(legal_moves)
+		sign = 1
+		if board.turn == chess.BLACK:
+			sign = -1
+		return sign * mobility
     pass
 
 
 def capture_chain_value(board: chess.Board):
+	score = 0
+	CHAIN_PENALTY = 50
+	
+	for sq in chess.SQUARES:
+		piece = board.piece_at(sq)
+		
+		if piece is not None and piece.piece_type != chess.KING:
+			attacked = board.is_attacked_by(not piece.color, sq)
+			
+			if attacked:
+				defended = board.is_attacked_by(piece.color, sq)
+				penalty = CHAIN_PENALTY if not defended else CHAIN_PENALTY // 3
+				
+				if piece.color == chess.WHITE:
+					score -= penalty
+				else:
+					score += penalty
+	return score
     pass
 
 
 def pawn_structure_value(board: chess.Board):
+
     pass
 
 
