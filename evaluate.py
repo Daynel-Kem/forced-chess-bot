@@ -55,18 +55,17 @@ def king_safety_value(board: chess.Board):
 
 
 def mobility_value(board: chess.Board):
-	legal_move = list(board.legal_moves)
-	capture_move = 0
+	legal_moves = list(board.legal_moves)
+	capture_moves = 0
 	
 	for move in legal_moves:
 		if board.is_capture(move):
-			capture_move += 1
-	if capture_move > 0:
+			capture_moves += 1
+	if capture_moves > 0:
 		mobility = capture_moves
 	else:
 		mobility = len(legal_moves)
-	sign = 1 if board.turn == chess.WHITE else -1
-	return sign * mobility
+	return mobility if board.turn == chess.WHITE else -mobility
 		
 	pass
 
@@ -148,4 +147,28 @@ def pawn_structure_value(board: chess.Board):
 
 def piece_activity_value(board: chess.Board):
     pass
+    
+
+
+def is_endgame(board: chess.Board)
+	white_queens = len(board.pieces(chess.QUEEN, chess.WHITE))
+	black_queens = len(board.pieces(chess.QUEEN, chess.BLACK))
+	
+	white_pieces = (
+		len(board.pieces(chess.KNIGHT, chess.WHITE)) +
+		len(board.pieces(chess.BISHOP, chess.WHITE)) +
+		len(board.pieces(chess.ROOK, chess.WHITE)) +
+		white_queens
+	)
+	black_pieces = (
+		len(board.pieces(chess.KNIGHT, chess.BLACK)) +
+		len(board.pieces(chess.BISHOP, chess.BLACK)) +
+		len(board.pieces(chess.ROOK, chess.BLACK)) +
+		black_queens
+	)					
+	return (white_queens == 0 and black_queens == 0) or (white_pieces <= 2 and black_pieces <= 2)
+
+
+
+
 
