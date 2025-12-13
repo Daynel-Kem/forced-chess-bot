@@ -1,4 +1,5 @@
 import chess
+from forced_chess import forced_legal_moves
 
 # The final evaluatio function
 def evaluate(position: chess.Board):
@@ -32,8 +33,8 @@ def material_value(board: chess.Board):
         chess.QUEEN: 900,
         chess.KING: 0,
     }
-
-	PAWN_TABLE = [
+	
+    PAWN_TABLE = [
 		0,0,0,0,0,0,0,0,
 		50,50,50,50,50,50,50,50,
 		10,10,20,30,30,20,10,10,
@@ -44,7 +45,7 @@ def material_value(board: chess.Board):
 		0,0,0,0,0,0,0,0
 	]
 	
-	KNIGHT_TABLE = [
+    KNIGHT_TABLE = [
 		-50,-40,-30,-30,-30,-30,-40,-50,
 		-40,-20,0,0,0,0,-20,-40,
 		-30,0,10,15,15,10,0,-30,
@@ -55,7 +56,8 @@ def material_value(board: chess.Board):
 		-50,-40,-30,-30,-30,-30,-40,-50
 	]
 	
-	BISHOP_TABLE = [
+    
+    BISHOP_TABLE = [
 		-20,-10,-10,-10,-10,-10,-10,-20,
 		-10,0,0,0,0,0,0,-10,
 		-10,0,5,10,10,5,0,-10,
@@ -66,7 +68,7 @@ def material_value(board: chess.Board):
 		-20,-10,-10,-10,-10,-10,-10,-20
 	]
 	
-	ROOK_TABLE = [
+    ROOK_TABLE = [
 		0,0,0,0,0,0,0,0,
 		5,10,10,10,10,10,10,5,
 		-5,0,0,0,0,0,0,-5,
@@ -77,7 +79,7 @@ def material_value(board: chess.Board):
 		0,0,0,5,5,0,0,0
 	]
 	
-	QUEEN_TABLE = [
+    QUEEN_TABLE = [
 		-20,-10,-10,-5,-5,-10,-10,-20,
 		-10,0,0,0,0,0,0,-10,
 		-10,0,5,5,5,5,0,-10,
@@ -88,7 +90,7 @@ def material_value(board: chess.Board):
 		-20,-10,-10,-5,-5,-10,-10,-20
 	]
 	
-	KING_MIDDLE_GAME_TABLE = [
+    KING_MIDDLE_GAME_TABLE = [
 		-30,-40,-40,-50,-50,-40,-40,-30,
 		-30,-40,-40,-50,-50,-40,-40,-30,
 		-30,-40,-40,-50,-50,-40,-40,-30,
@@ -99,7 +101,7 @@ def material_value(board: chess.Board):
 		20,30,10,0,0,10,30,20
 	]
 	
-	PIECE_SQUARE_TABLES = {
+    PIECE_SQUARE_TABLES = {
 		chess.PAWN: PAWN_TABLE,
 		chess.KNIGHT: KNIGHT_TABLE,
 		chess.BISHOP: BISHOP_TABLE,
@@ -130,7 +132,7 @@ def king_safety_value(board: chess.Board):
 
 
 def mobility_value(board: chess.Board):
-	legal_moves = list(board.legal_moves)
+	legal_moves = list(forced_legal_moves(board))
 	capture_moves = 0
 	
 	for move in legal_moves:
@@ -141,8 +143,6 @@ def mobility_value(board: chess.Board):
 	else:
 		mobility = len(legal_moves)
 	return mobility if board.turn == chess.WHITE else -mobility
-		
-	pass
 
 
 def capture_chain_value(board: chess.Board):
@@ -190,15 +190,15 @@ def pawn_structure_value(board: chess.Board):
 			score += 10 * (cnt - 1)
 		
 	def is_isolated(files, f):
-		file_list = files_dict.keys()
+		files_list = set(files.keys())
 		return (f - 1 not in files_list) and (f + 1 not in files_list)
 		
 	def is_connected(files, f):
-		file_list = files_dict.keys()
+		files_list = set(files.keys())
 		return (f - 1 in files_list) or (f + 1 in files_list)
 		
 	for sq in white_pawns:
-		f = chess.sqaure_file(sq)
+		f = chess.square_file(sq)
 		if is_isolated(wp, f):
 			score -= 12
 	
@@ -225,7 +225,7 @@ def piece_activity_value(board: chess.Board):
     
 
 
-def is_endgame(board: chess.Board)
+def is_endgame(board: chess.Board):
 	white_queens = len(board.pieces(chess.QUEEN, chess.WHITE))
 	black_queens = len(board.pieces(chess.QUEEN, chess.BLACK))
 	

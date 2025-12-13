@@ -3,10 +3,9 @@ from dataclasses import dataclass
 from typing import List, Optional
 from transposition import Transposition_Table
 import time
-
-from evaluate import evaluate, PIECE_VALUES
-from forced_capture import forced_legal_moves
-from transposition import Transposition_Table
+from forced_chess import forced_legal_moves
+# from evaluate import evaluate
+from test_evaluate import evaluate
 
 TT = Transposition_Table(size=100000)
 
@@ -18,9 +17,6 @@ class SearchResult:
     nodes_searched: int
     time_taken: float
     pv: List[chess.Move]
-
-# Max Player = True means the player is playing White pieces
-# Max Player = False means the player is playing Black pieces
 
 TT = Transposition_Table(size=2000000)
 
@@ -84,7 +80,7 @@ def iterative_deepening(self, board: chess.Board, max_depth: int = 50,
 						time_limit:float = None):
 						
 	start_time = time.time()
-	stats.reset()
+	# stats.reset()
 	
 	best_move = None
 	best_score = -float("inf") 
@@ -95,7 +91,7 @@ def iterative_deepening(self, board: chess.Board, max_depth: int = 50,
 	def time_up():
 		if time_limit is None:
 			return False
-		return (time.time() - start.time) >= time_limit
+		return (time.time() - start_time) >= time_limit
 		
 	for depth in range(1, max_depth + 1):
 		if time_up():
@@ -117,7 +113,7 @@ def iterative_deepening(self, board: chess.Board, max_depth: int = 50,
 			
 		moves = list(forced_legal_moves(board))
 		if moves:
-			best_move = max(moves. key = lambda mv: TT.lookup(board, mv).score if
+			best_move = max(moves = lambda mv: TT.lookup(board, mv).score if
 								TT.lookup(board, mv) else -999999)
 		else:
 			best_move = None
@@ -126,10 +122,8 @@ def iterative_deepening(self, board: chess.Board, max_depth: int = 50,
 		pv = [best_move]
 		
 		elapsed = time.time() - start_time
-		nodes = stats.nodes
 		
 		print(f"[Depth {depth}] score={score} best_move={best_move} "
-				f"nodes={nodes} nps={nps:.0f} "
 				f"time={elapsed:.2f}s")
 
 		if abs(score) > 29000:
@@ -144,14 +138,14 @@ def iterative_deepening(self, board: chess.Board, max_depth: int = 50,
 						time_taken = time.time() - start_time, pv=pv)
 					
 						
-def quiescence_search(board: chess.Board, alpha:int, beta:int, 
+def quiescence_search(board: chess.Board, alpha: int, beta: int, 
 						depth_left: int = 0) -> int:
 						
 	stand_pat = evaluate(board)
 	
 	if stand_pat >= beta:
 		return beta
-	stand_pat = evaluate(board)
+
 	
 	if stand_pat > alpha:
 		return stand_pat
@@ -216,10 +210,10 @@ def order_moves(board: chess.Board, moves: List[chess.Move],
 				victim_value = PIECE_VALUES[chess.PAWN]
 				
 			attacker_value = PIECE_VALUES[attacker_piece.piece_type] if attacker_piece else 0
-			s += 50_000 + 10 * victim - attacker
+			s += 50_000 + 10 * victim_value - attacker_value
 			
 			board.push(move)
-			if gives.is_check:
+			if board.is_check():
 				s += 20_000
 			board.pop()
 			
