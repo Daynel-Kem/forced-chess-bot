@@ -2,8 +2,7 @@ import chess
 from forced_chess import forced_legal_moves
 
 # The final evaluatio function
-def evaluate(position: chess.Board):
-
+def evaluate(position: chess.Board) -> int:
     return (material_value(position) +
             positional_value(position) +
             king_safety_value(position) + 
@@ -223,7 +222,6 @@ def pawn_structure_value(board: chess.Board):
 def piece_activity_value(board: chess.Board):
     pass
     
-
 
 def is_endgame(board: chess.Board):
 	white_queens = len(board.pieces(chess.QUEEN, chess.WHITE))
