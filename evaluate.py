@@ -1,185 +1,186 @@
 import chess
-from forced_chess import forced_legal_moves
 
-# Piece Square Tables
-PAWN_TABLE = [
-    0,0,0,0,0,0,0,0,
-    50,50,50,50,50,50,50,50,
-    10,10,20,30,30,20,10,10,
-    5,5,10,25,25,10,5,5,
-    0,0,0,20,20,0,0,0,
-    5,-5,-10,0,0,-10,-5,5,
-    5,10,10,-20,-20,10,10,5,
-    0,0,0,0,0,0,0,0
-]
+ CHESS_BASE_VALUES = {
+        chess.PAWN: 120,
+        chess.KNIGHT: 270,
+        chess.BISHOP: 315,
+        chess.ROOK: 550,
+        chess.QUEEN: 1000,
+        chess.KING: 0,
+    }
 
-KNIGHT_TABLE = [
-    -50,-40,-30,-30,-30,-30,-40,-50,
-    -40,-20,0,0,0,0,-20,-40,
-    -30,0,10,15,15,10,0,-30,
-    -30,5,15,20,20,15,5,-30,
-    -30,0,15,20,20,15,0,-30,
-    -30,5,10,15,15,10,5,-30,
-    -40,-20,0,5,5,0,-20,-40,
-    -50,-40,-30,-30,-30,-30,-40,-50
-]
+    CHESS_ENDGAME_VALUES = {
+        chess.PAWN: 160,
+        chess.KNIGHT: 220,
+        chess.BISHOP: 360,
+        chess.ROOK: 620,
+        chess.QUEEN: 900,
+        chess.KING: 0,
+    }
 
-BISHOP_TABLE = [
-    -20,-10,-10,-10,-10,-10,-10,-20,
-    -10,0,0,0,0,0,0,-10,
-    -10,0,5,10,10,5,0,-10,
-    -10,5,5,10,10,5,5,-10,
-    -10,0,10,10,10,10,0,-10,
-    -10,10,10,10,10,10,10,-10,
-    -10,5,0,0,0,0,5,-10,
-    -20,-10,-10,-10,-10,-10,-10,-20
-]
-
-ROOK_TABLE = [
-    0,0,0,0,0,0,0,0,
-    5,10,10,10,10,10,10,5,
-    -5,0,0,0,0,0,0,-5,
-    -5,0,0,0,0,0,0,-5,
-    -5,0,0,0,0,0,0,-5,
-    -5,0,0,0,0,0,0,-5,
-    -5,0,0,0,0,0,0,-5,
-    0,0,0,5,5,0,0,0
-]
-
-QUEEN_TABLE = [
-    -20,-10,-10,-5,-5,-10,-10,-20,
-    -10,0,0,0,0,0,0,-10,
-    -10,0,5,5,5,5,0,-10,
-    -5,0,5,5,5,5,0,-5,
-    0,0,5,5,5,5,0,-5,
-    -10,5,5,5,5,5,0,-10,
-    -10,0,5,0,0,0,0,-10,
-    -20,-10,-10,-5,-5,-10,-10,-20
-]
-
-KING_MIDDLE_GAME_TABLE = [
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -20,-30,-30,-40,-40,-30,-30,-20,
-    -10,-20,-20,-20,-20,-20,-20,-10,
-    20,20,0,0,0,0,20,20,
-    20,30,10,0,0,10,30,20
-]
-
-KING_END_GAME_TABLE = [
-    -50,-40,-30,-20,-20,-30,-40,-50,
-    -30,-20,-10,  0,  0,-10,-20,-30,
-    -30,-10, 20, 30, 30, 20,-10,-30,
-    -30,-10, 30, 40, 40, 30,-10,-30,
-    -30,-10, 30, 40, 40, 30,-10,-30,
-    -30,-10, 20, 30, 30, 20,-10,-30,
-    -30,-30,  0,  0,  0,  0,-30,-30,
-    -50,-30,-30,-30,-30,-30,-30,-50
-]
-
-PIECE_SQUARE_TABLES = {
-    chess.PAWN: PAWN_TABLE,
-    chess.KNIGHT: KNIGHT_TABLE,
-    chess.BISHOP: BISHOP_TABLE,
-    chess.ROOK: ROOK_TABLE,
-    chess.QUEEN: QUEEN_TABLE,
-}
-
-# Phase (endgame, middlegame)
-PHASE_WEIGHTS = {
-    chess.PAWN: 0,
-    chess.KNIGHT: 1,
-    chess.BISHOP: 1,
-    chess.ROOK: 2,
-    chess.QUEEN: 4
-}
-MAX_PHASE = 24
-
-# Material Value Table (adjusted for forced capture)
-CHESS_BASE_VALUES = {
-    chess.PAWN: 120,
-    chess.KNIGHT: 270,
-    chess.BISHOP: 315,
-    chess.ROOK: 550,
-    chess.QUEEN: 1000,
-    chess.KING: 0,
-}
-
-CHESS_ENDGAME_VALUES = {
-    chess.PAWN: 140,
-    chess.KNIGHT: 220,
-    chess.BISHOP: 360,
-    chess.ROOK: 620,
-    chess.QUEEN: 900,
-    chess.KING: 0,
-}
-
+	PAWN_TABLE = [
+		0,0,0,0,0,0,0,0,
+		50,50,50,50,50,50,50,50,
+		10,10,20,30,30,20,10,10,
+		5,5,10,25,25,10,5,5,
+		0,0,0,20,20,0,0,0,
+		5,-5,-10,0,0,-10,-5,5,
+		5,10,10,-20,-20,10,10,5,
+		0,0,0,0,0,0,0,0
+	]
+	
+	KNIGHT_TABLE = [
+		-50,-40,-30,-30,-30,-30,-40,-50,
+		-40,-20,0,0,0,0,-20,-40,
+		-30,0,10,15,15,10,0,-30,
+		-30,5,15,20,20,15,5,-30,
+		-30,0,15,20,20,15,0,-30,
+		-30,5,10,15,15,10,5,-30,
+		-40,-20,0,5,5,0,-20,-40,
+		-50,-40,-30,-30,-30,-30,-40,-50
+	]
+	
+	BISHOP_TABLE = [
+		-20,-10,-10,-10,-10,-10,-10,-20,
+		-10,0,0,0,0,0,0,-10,
+		-10,0,5,10,10,5,0,-10,
+		-10,5,5,10,10,5,5,-10,
+		-10,0,10,10,10,10,0,-10,
+		-10,10,10,10,10,10,10,-10,
+		-10,5,0,0,0,0,5,-10,
+		-20,-10,-10,-10,-10,-10,-10,-20
+	]
+	
+	ROOK_TABLE = [
+		0,0,0,0,0,0,0,0,
+		5,10,10,10,10,10,10,5,
+		-5,0,0,0,0,0,0,-5,
+		-5,0,0,0,0,0,0,-5,
+		-5,0,0,0,0,0,0,-5,
+		-5,0,0,0,0,0,0,-5,
+		-5,0,0,0,0,0,0,-5,
+		0,0,0,5,5,0,0,0
+	]
+	
+	QUEEN_TABLE = [
+		-20,-10,-10,-5,-5,-10,-10,-20,
+		-10,0,0,0,0,0,0,-10,
+		-10,0,5,5,5,5,0,-10,
+		-5,0,5,5,5,5,0,-5,
+		0,0,5,5,5,5,0,-5,
+		-10,5,5,5,5,5,0,-10,
+		-10,0,5,0,0,0,0,-10,
+		-20,-10,-10,-5,-5,-10,-10,-20
+	]
+	
+	KING_MIDDLE_GAME_TABLE = [
+		-30,-40,-40,-50,-50,-40,-40,-30,
+		-30,-40,-40,-50,-50,-40,-40,-30,
+		-30,-40,-40,-50,-50,-40,-40,-30,
+		-30,-40,-40,-50,-50,-40,-40,-30,
+		-20,-30,-30,-40,-40,-30,-30,-20,
+		-10,-20,-20,-20,-20,-20,-20,-10,
+		20,20,0,0,0,0,20,20,
+		20,30,10,0,0,10,30,20
+	]
+	
 # The final evaluatio function
-def evaluate(position: chess.Board) -> int:
-    phase = compute_phase(position)
-	
-    # If its checkmate, return extremely high value for whoever won
-    if position.is_game_over():
-        return -30000 if position.turn == chess.WHITE else 30000
-	
-    # If its stalemate or no winner, then return 0
-    if position.is_stalemate() or position.is_insufficient_material():
-        return 0
-    
-    # Return the final calculated value
-    return (material_and_piece_square_value(position, phase) +
-            # positional_value(position) +
+def evaluate(position: chess.Board):
+
+    return (material_value(position) +
+            positional_value(position) +
             king_safety_value(position) + 
             mobility_value(position) + 
             capture_chain_value(position) +
-			# piece_activity_value(position) +
-            pawn_structure_value(position) 
-			)
+            pawn_structure_value(position))
 
-def material_and_piece_square_value(board: chess.Board, phase):
-    ps_value = 0
-    mat_value = 0
+
+def material_value(board: chess.Board):
+    # Material Value = Piece Value + Optionality of Capture Decisions
+    
+    # Adjusted based on how well each piece improves or worsens in this variant
 	
-    for square, piece in board.piece_map().items():
-        idx = square if piece.color == chess.WHITE else chess.square_mirror(square)
-		
-        if piece.piece_type == chess.KING:
-            mg = KING_MIDDLE_GAME_TABLE[idx]
-            eg = KING_END_GAME_TABLE[idx]
-            pst = (mg * phase + eg * (MAX_PHASE - phase)) // MAX_PHASE
-            mv = 0
-        else:
-            pst = PIECE_SQUARE_TABLES[piece.piece_type][idx]
-            mv = (CHESS_BASE_VALUES[piece.piece_type] * phase + 
-						  CHESS_ENDGAME_VALUES[piece.piece_type] * (MAX_PHASE - phase)) // MAX_PHASE
+	PIECE_SQUARE_TABLES = {
+		chess.PAWN: PAWN_TABLE,
+		chess.KNIGHT: KNIGHT_TABLE,
+		chess.BISHOP: BISHOP_TABLE,
+		chess.ROOK: ROOK_TABLE,
+		chess.QUEEN: QUEEN_TABLE,
+		chess.KING: KING_MIDDLE_GAME_TABLE
+	}
+	
+    value = 0
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece is not None:
+            if piece.color == chess.WHITE:
+                value += CHESS_BASE_VALUES[piece]
+            else:
+                value -= CHESS_BASE_VALUES[piece]
+    return value
 
-        ps_value += pst if piece.color == chess.WHITE else -pst
-        mat_value += mv if piece.color == chess.WHITE else -mv
-		
-    total_value = ps_value + mat_value
-    # Bishop Pair Bonus
-    if len(board.pieces(chess.BISHOP, chess.WHITE)) >= 2:
-        total_value += 30
-    if len(board.pieces(chess.BISHOP, chess.BLACK)) >= 2:
-        total_value -= 30
 
-    return total_value
 
 def positional_value(board: chess.Board):
-    pass
+	total = 0
+	
+	for sq in chess.SQUARES:
+		piece = board.piece_at(sq)
+		if piece is None:
+			continue
+		
+		table = PIECE_SQUARE_TABLES.get(piece.piece_type)
+		if table is None:
+			continue
+		
+		if piece.color == chess.WHITE:
+			idx = sq
+			total += table[idx]
+		else:
+			idx = chess.square_mirror(sq)
+			total -= table[idx]
+			
+	return total
 
 
 def king_safety_value(board: chess.Board):
-    # Calculate if Game State (Endgame or not)
-    value = 0
-    return value
+	score = 0
 	
+	for color in [chess.WHITE, chess.BLACK]:
+		king_square = board.king(color)
+		if king_square is None:
+			continue
+			
+		king_zone = []
+		rank = chess.square_rank(king_square)
+		file = chess.square_file(king_square)
+		
+		for dr in [-1, 0, 1]:
+			for df in [-1, 0, 1]:
+				if dr == 0 and df == 0:
+					continue
+				new_rank, new_file = rank + dr. file + df
+				if 0 <= new_rank <= 7 and 0 <= new_file <= 7:
+					king_zone.append(chess.square(new_file, new_rank))
+		
+		attacked_on_king_zone = sum(
+			1 for sq in king_zone
+			if board.is_attacked_by(not color, sq)
+		)
+		
+		safety_penalty = attacked_on_king_zone * 20
+		
+		if color == chess.WHITE:
+			score -= safety_penalty
+		else:
+			score += safety_penalty
+	
+	return score
+    pass
 
 
 def mobility_value(board: chess.Board):
-	legal_moves = list(forced_legal_moves(board))
+	legal_moves = list(board.legal_moves)
 	capture_moves = 0
 	
 	for move in legal_moves:
@@ -190,6 +191,8 @@ def mobility_value(board: chess.Board):
 	else:
 		mobility = len(legal_moves)
 	return mobility if board.turn == chess.WHITE else -mobility
+		
+	pass
 
 
 def capture_chain_value(board: chess.Board):
@@ -237,15 +240,15 @@ def pawn_structure_value(board: chess.Board):
 			score += 10 * (cnt - 1)
 		
 	def is_isolated(files, f):
-		files_list = set(files.keys())
+		file_list = files_dict.keys()
 		return (f - 1 not in files_list) and (f + 1 not in files_list)
 		
 	def is_connected(files, f):
-		files_list = set(files.keys())
+		file_list = files_dict.keys()
 		return (f - 1 in files_list) or (f + 1 in files_list)
 		
 	for sq in white_pawns:
-		f = chess.square_file(sq)
+		f = chess.sqaure_file(sq)
 		if is_isolated(wp, f):
 			score -= 12
 	
@@ -270,14 +273,27 @@ def pawn_structure_value(board: chess.Board):
 def piece_activity_value(board: chess.Board):
     pass
     
-# helper function to compute the phase
-def compute_phase(board: chess.Board):
-    phase = 0
-    for piece_type, w in PHASE_WEIGHTS.items():
-        phase += w * (
-            len(board.pieces(piece_type, chess.WHITE)) +
-            len(board.pieces(piece_type, chess.BLACK))
-        )
-    return min(phase, MAX_PHASE)
+
+
+def is_endgame(board: chess.Board):
+	queens = (
+		len(board.pieces(chess.QUEEN, chess.WHITE)) +
+		len(board.pieces(chess.QUEEN, chess.BLACK))
+	)
+	
+	minor_major = (
+		len(board.pieces(chess.KNIGHT, chess.WHITE)) +
+		len(board.pieces(chess.BISHOP, chess.WHITE)) +
+		len(board.pieces(chess.ROOK, chess.WHITE)) +
+		len(board.pieces(chess.KNIGHT, chess.BLACK)) +
+		len(board.pieces(chess.BISHOP, chess.BLACK)) +
+		len(board.pieces(chess.ROOK, chess.BLACK)) +
+	)					
+	return queens == 0 or minor_major <= 4
+	
+
+
+
+
 
 
