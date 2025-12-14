@@ -21,7 +21,7 @@ TT = Transposition_Table(size=2000000)
 
 # Max Player = True means the player is playing White pieces
 # Max Player = False means the player is playing Black pieces
-def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root, pv_move=None):
+def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root, pv=None):
     # Transposition Table Logic
     entry = TT.lookup(board)
     if entry and entry.depth >= depth:
@@ -33,7 +33,7 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root,
             alpha = max(alpha, entry.score)
 
         if alpha >= beta:
-            return entry.score, None
+            return entry.score, entry.best_move
 		
 	# include quiescence search to the rood note (y u gotta be so rude~)
     if depth == 0 or board.is_game_over():
@@ -46,6 +46,10 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root,
     orig_alpha, orig_beta = alpha, beta
 
 	# Move Ordering
+    pv_move = None
+    if pv is not None and depth_from_root < len(pv):
+        pv_move = pv[depth_from_root]
+
     moves = order_moves(board, forced_legal_moves(board), pv_move)
 
     if max_player:
@@ -121,15 +125,15 @@ def iterative_deepening(board: chess.Board, max_depth: int = 50,
 			alpha = best_score - window
 			beta = best_score + window
 			
-		score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0)  
+		score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv)  
 		if score <= alpha and not time_up():
 			alpha = -float("inf")
 			beta = float("inf")
-			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0)
+			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv)
 		elif score >= beta and not time_up():
 			alpha = -float("inf")
 			beta = float("inf")
-			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0)
+			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv)
 			
 		# I changed how minimax works so it returns the best move itself, so ima comment this out
 		# moves = list(forced_legal_moves(board))
@@ -217,7 +221,13 @@ def quiescence_search(board: chess.Board, alpha: int, beta: int, maximizing_play
 			tactical_moves.append(move)
 		else:
 			board.push(move)
+			# direct check after the move
 			gives_check = board.is_check()
+			# robust discovered-check detection: check whether the mover now attacks the opponent king
+			mover_color = not board.turn
+			opp_king_sq = board.king(board.turn)
+			if opp_king_sq is not None and board.is_attacked_by(mover_color, opp_king_sq):
+				gives_check = True
 			board.pop()
 			if gives_check:
 				tactical_moves.append(move)

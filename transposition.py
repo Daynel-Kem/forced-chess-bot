@@ -10,6 +10,7 @@ class Transposition_Table:
         return key % self.size
     
     def store(self, board: chess.Board, depth, score, flag, best_move):
+        # depth is depth remaining, not how deep it is from the root
         key = chess.polyglot.zobrist_hash(board)
         idx = self.index(key)
 

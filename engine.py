@@ -32,6 +32,9 @@ class WinBoardEngine:
     def debug(self, msg):
         sys.stderr.write(msg + '\n')
 
+    def set_depth(self, depth):
+        self.depth = depth
+
     # Move Handling
     def parse_move(self, move_str):
         try:
