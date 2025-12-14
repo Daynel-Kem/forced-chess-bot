@@ -3,20 +3,19 @@ import sys
 import chess
 
 # from evaluate import evaluate
-# from bbsearch import minimax
 from forced_chess import forced_legal_moves
 
 from test_evaluate import evaluate
 from bbsearch import iterative_deepening
 
-DEFAULT_DEPTH = 7
+MAX_DEPTH = 50
 
 class WinBoardEngine:
     def __init__(self):
         self.board = chess.Board()
         self.force_mode = False
         self.my_color = chess.BLACK 
-        self.depth = DEFAULT_DEPTH
+        self.depth = MAX_DEPTH
 
         self.my_time = 1 * 60 * 100 # Each player only gets 1 min in our version
         self.opp_time = 1 * 60 * 100
@@ -45,8 +44,24 @@ class WinBoardEngine:
     def make_engine_move(self):
         if self.board.is_game_over():
             return
+        
+        # If there's only one move, just do that
+        moves = forced_legal_moves(self.board)
+        if len(moves) == 1:
+            move = moves[0]
+            self.board.push(move)
+            self.send(f"move {move.uci()}")
+            return
+
         # Use iterative deepening search to pick a move
-        res = iterative_deepening(self.board, max_depth=self.depth, time_limit=self.my_time)
+        BASE_TIME = 0.6      # seconds
+        MAX_TIME  = 1.5      # never exceed this
+
+        time_per_move = min(
+            MAX_TIME,
+            max(BASE_TIME, (self.my_time / 100) / max(6, self.moves_to_go))
+        )
+        res = iterative_deepening(self.board, max_depth=self.depth, time_limit=time_per_move)
 
         move = res.best_move
         if move is None:
@@ -109,7 +124,8 @@ class WinBoardEngine:
                 self.board.push(move)
 
                 if not self.force_mode and self.board.turn == self.my_color:
-                    self.make_engine_move()
+                    if not self.board.is_game_over():
+                        self.make_engine_move()
 
             return
         

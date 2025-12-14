@@ -4,10 +4,8 @@ from typing import List, Optional
 from transposition import Transposition_Table
 import time
 from forced_chess import forced_legal_moves
-# from evaluate import evaluate
-from test_evaluate import evaluate
-
-TT = Transposition_Table(size=100000)
+from evaluate import evaluate
+#from test_evaluate import evaluate
 
 @dataclass
 class SearchResult:
@@ -21,7 +19,7 @@ TT = Transposition_Table(size=2000000)
 
 # Max Player = True means the player is playing White pieces
 # Max Player = False means the player is playing Black pieces
-def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root, pv=None):
+def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root, pv=None) -> tuple[int, Optional[chess.Move]]:
     # Transposition Table Logic
     entry = TT.lookup(board)
     if entry and entry.depth >= depth:
@@ -37,7 +35,7 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root,
 		
 	# include quiescence search to the rood note (y u gotta be so rude~)
     if depth == 0 or board.is_game_over():
-        score = quiescence_search(board, alpha, beta, maximizing_player=max_player)
+        score = quiescence_search(board, alpha, beta, maximizing_player=max_player, depth_left=6)
         return score, None
 	
 	# keeping track of best move for best TT and for engine
@@ -59,6 +57,11 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root,
             evaluation, _ = minimax(board, depth - 1, alpha, beta, False, depth_from_root+1)
             board.pop()
 
+			# Early Checkmate Check
+            if evaluation >= 29000:
+                TT.store(board, depth, evaluation, "EXACT", best_move=move)
+                return evaluation, move
+
             if evaluation > m_eval:
                 m_eval = evaluation
                 best_move = move
@@ -75,6 +78,11 @@ def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root,
             evaluation, _ = minimax(board, depth - 1, alpha, beta, True, depth_from_root+1)
             board.pop()
 
+			# Early Checkmate Check
+            if evaluation <= -29000:
+                TT.store(board, depth, evaluation, "EXACT", best_move=move)
+                return evaluation, move
+    
             if evaluation < m_eval:
                 m_eval = evaluation
                 best_move = move
@@ -107,7 +115,7 @@ def iterative_deepening(board: chess.Board, max_depth: int = 50,
 	best_score = -float("inf") 
 	pv = []
 	
-	window = 25
+	window = 75
 	
 	def time_up():
 		if time_limit is None:
