@@ -35,6 +35,9 @@ class Transposition_Table:
                 count += 1
         return count
     
+    def clear(self):
+        self.table = [None] * self.size
+    
 
 class Transposition_Entry:
     def __init__(self, key, depth, score, flag, best_move):

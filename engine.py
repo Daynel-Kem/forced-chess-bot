@@ -6,7 +6,7 @@ import chess
 from forced_chess import forced_legal_moves
 
 from test_evaluate import evaluate
-from bbsearch import iterative_deepening
+from bbsearch import iterative_deepening, TT
 
 MAX_DEPTH = 50
 
@@ -23,6 +23,9 @@ class WinBoardEngine:
         self.moves_to_go = 40
         self.sudden_death = False
 
+        # the amount of games the engine got flagged is horrendous
+        self.panic = False
+
     # Helper Functions
     def send(self, msg):
         sys.stdout.write(msg + '\n')
@@ -31,8 +34,19 @@ class WinBoardEngine:
     def debug(self, msg):
         sys.stderr.write(msg + '\n')
 
-    def set_depth(self, depth):
-        self.depth = depth
+    def in_panic_mode(self) -> bool:
+        # milliseconds on xboard clock
+        time_left_sec = self.my_time / 100
+
+        # sudden death = no safety net
+        if self.sudden_death:
+            return time_left_sec < 3.0
+
+        # normal time control
+        return (
+            time_left_sec < 2.0 or
+            (time_left_sec / max(1, self.moves_to_go)) < 0.25
+        )
 
     # Move Handling
     def parse_move(self, move_str):
@@ -54,22 +68,60 @@ class WinBoardEngine:
             return
 
         # Use iterative deepening search to pick a move
-        BASE_TIME = 0.6      # seconds
-        MAX_TIME  = 1.5      # never exceed this
+        BASE_TIME = 0.6 # seconds
+        MAX_TIME  = 1.2 # never exceed this
+        if self.sudden_death or self.moves_to_go is None:
+            moves_to_go = 20
+        else:
+            moves_to_go = max(1, self.moves_to_go)
 
         time_per_move = min(
             MAX_TIME,
-            max(BASE_TIME, (self.my_time / 100) / max(6, self.moves_to_go))
+            max(BASE_TIME, (self.my_time / 100) / moves_to_go)
         )
-        res = iterative_deepening(self.board, max_depth=self.depth, time_limit=time_per_move)
 
+        panic = self.in_panic_mode()
+
+        if panic:
+            time_per_move = min(time_per_move, 0.2)
+
+        start_time = time.time()
+        res = iterative_deepening(self.board, max_depth=self.depth, time_limit=time_per_move, panic=panic)
+        elapsed_time = time.time() - start_time
+
+        # decrement remaining time
+        self.my_time -= int(elapsed_time * 100)
+        if self.my_time < 0:
+            self.my_time = 0
+
+        score = res.score
         move = res.best_move
+
+        # offer a draw if we're losing lmao, see what happens
+        TIME_THRESHOLD = 0.2
+        DRAW_THRESHOLD = 2000
+        elapsed_time = (1 - self.my_time / (self.moves_to_go * time_per_move * 100)) * 100
+
+        send_draw = False
+        if self.my_color == chess.WHITE and score <= -DRAW_THRESHOLD:
+            send_draw = True
+        elif self.my_color == chess.BLACK and score >= DRAW_THRESHOLD:
+            send_draw = True
+
+        if not self.force_mode and send_draw and elapsed_time > TIME_THRESHOLD:
+            self.send("draw")
+
         if move is None:
             return
 
         # push the move and send it to the GUI
         self.board.push(move)
         self.send(f"move {move.uci()}")
+
+        if self.moves_to_go > 1:
+            self.moves_to_go -= 1
+        else:
+            self.moves_to_go = 40  # or sudden-death reset
             
 
     # Winboard Protocol Handling
@@ -88,6 +140,13 @@ class WinBoardEngine:
             self.board.reset()
             self.force_mode = False
             self.my_color = chess.BLACK
+            self.my_time = 1 * 60 * 100 # Each player only gets 1 min in our version
+            self.opp_time = 1 * 60 * 100
+            self.increment = 0
+            self.moves_to_go = 40
+            self.panic = False
+            self.sudden_death = False
+            TT.clear()
             return
         
         if cmd == "quit":

@@ -4,7 +4,7 @@ from typing import List, Optional
 from transposition import Transposition_Table
 import time
 from forced_chess import forced_legal_moves
-from evaluate import evaluate
+from evaluate import evaluate, MAX_PHASE, PHASE_WEIGHTS, compute_phase
 #from test_evaluate import evaluate
 
 @dataclass
@@ -17,110 +17,144 @@ class SearchResult:
 
 TT = Transposition_Table(size=2000000)
 
+# Killer move heuristics
+MAX_SEARCH_DEPTH = 50
+killer_moves = [[None, None] for _ in range(MAX_SEARCH_DEPTH)]
+
 # Max Player = True means the player is playing White pieces
 # Max Player = False means the player is playing Black pieces
-def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root, pv=None) -> tuple[int, Optional[chess.Move]]:
-    # Transposition Table Logic
-    entry = TT.lookup(board)
-    if entry and entry.depth >= depth:
-        if entry.flag == "EXACT":
-            return entry.score, entry.best_move
-        elif entry.flag == "UPPERBOUND":
-            beta = min(beta, entry.score)
-        elif entry.flag == "LOWERBOUND":
-            alpha = max(alpha, entry.score)
+def minimax(board: chess.Board, depth, alpha, beta, max_player, depth_from_root, pv=None, panic=False) -> tuple[int, Optional[chess.Move]]:
+	# Transposition Table Logic
+	entry = TT.lookup(board)
+	if entry and entry.depth >= depth:
+		if entry.flag == "EXACT":
+			return entry.score, entry.best_move
+		elif entry.flag == "UPPERBOUND":
+			beta = min(beta, entry.score)
+		elif entry.flag == "LOWERBOUND":
+			alpha = max(alpha, entry.score)
 
-        if alpha >= beta:
-            return entry.score, entry.best_move
+		if alpha >= beta:
+			return entry.score, entry.best_move
 		
 	# include quiescence search to the rood note (y u gotta be so rude~)
-    if depth == 0 or board.is_game_over():
-        score = quiescence_search(board, alpha, beta, maximizing_player=max_player, depth_left=6)
-        return score, None
-	
+	if depth == 0 or board.is_game_over():
+		# Make the board not do quiescence search at the beginning (like we're doing 20 second first moves are we fr rn)
+		if board.fullmove_number <= 2:
+			return evaluate(board, depth_from_root), None
+		else:
+			phase = compute_phase(board)
+			if panic:
+				depth_left = 1
+			else:
+				depth_left = 3 if phase < 8 else 6
+			score = quiescence_search(board, alpha, beta, maximizing_player=max_player, depth_left=depth_left, depth_from_root=depth_from_root)
+			return score, None
+
 	# keeping track of best move for best TT and for engine
-    best_move = None
+	best_move = None
 	# keep original window for TT flag determination
-    orig_alpha, orig_beta = alpha, beta
+	orig_alpha, orig_beta = alpha, beta
 
 	# Move Ordering
-    pv_move = None
-    if pv is not None and depth_from_root < len(pv):
-        pv_move = pv[depth_from_root]
+	pv_move = None
+	if pv is not None and depth_from_root < len(pv):
+		pv_move = pv[depth_from_root]
 
-    moves = order_moves(board, forced_legal_moves(board), pv_move)
+	moves = order_moves(board, forced_legal_moves(board), pv_move=pv_move, depth_from_root=depth_from_root)
 
-    if max_player:
-        m_eval = -float("inf")
-        for move in moves:
-            board.push(move)
-            evaluation, _ = minimax(board, depth - 1, alpha, beta, False, depth_from_root+1)
-            board.pop()
-
-			# Early Checkmate Check
-            if evaluation >= 29000:
-                TT.store(board, depth, evaluation, "EXACT", best_move=move)
-                return evaluation, move
-
-            if evaluation > m_eval:
-                m_eval = evaluation
-                best_move = move
-
-            m_eval = max(m_eval, evaluation)
-            alpha = max(alpha, evaluation)
-            if beta <= alpha:
-                break
-    
-    else:
-        m_eval = float("inf")
-        for move in moves:
-            board.push(move)
-            evaluation, _ = minimax(board, depth - 1, alpha, beta, True, depth_from_root+1)
-            board.pop()
+	if max_player:
+		m_eval = -float("inf")
+		for move in moves:
+			board.push(move)
+			evaluation, _ = minimax(board, depth - 1, alpha, beta, False, depth_from_root+1)
+			board.pop()
 
 			# Early Checkmate Check
-            if evaluation <= -29000:
-                TT.store(board, depth, evaluation, "EXACT", best_move=move)
-                return evaluation, move
-    
-            if evaluation < m_eval:
-                m_eval = evaluation
-                best_move = move
+			if evaluation >= 29000:
+				mate_score = 30000 - depth_from_root
+				TT.store(board, depth, evaluation, "EXACT", best_move=move)
+				return evaluation, move
 
-            m_eval = min(m_eval, evaluation)
-            beta = min(beta, evaluation)
-            if beta <= alpha:
-                break
+			if evaluation > m_eval:
+				m_eval = evaluation
+				best_move = move
+
+			m_eval = max(m_eval, evaluation)
+			alpha = max(alpha, evaluation)
+
+			# killer move stuff
+			if evaluation >= beta and not board.is_capture(move):
+				if move not in killer_moves[depth_from_root]:
+					killer_moves[depth_from_root][1] = killer_moves[depth_from_root][0]  # push old killer down
+					killer_moves[depth_from_root][0] = move
+			if beta <= alpha:
+				break
+
+	else:
+		m_eval = float("inf")
+		for move in moves:
+			board.push(move)
+			evaluation, _ = minimax(board, depth - 1, alpha, beta, True, depth_from_root+1)
+			board.pop()
+
+			# Early Checkmate Check
+			if evaluation <= -29000:
+				mate_score = -30000 + depth_from_root
+				TT.store(board, depth, mate_score, "EXACT", best_move=move)
+				return evaluation, move
+
+			if evaluation < m_eval:
+				m_eval = evaluation
+				best_move = move
+
+			m_eval = min(m_eval, evaluation)
+			beta = min(beta, evaluation)
+
+			# killer move stuff
+			if evaluation <= alpha and not board.is_capture(move):
+				if move not in killer_moves[depth_from_root]:
+					killer_moves[depth_from_root][1] = killer_moves[depth_from_root][0]  # push old killer down
+					killer_moves[depth_from_root][0] = move
+			if beta <= alpha:
+				break
 
 	# determine TT flag relative to the original window
-    if m_eval <= orig_alpha:
-        flag = "UPPERBOUND"
-    elif m_eval >= orig_beta:
-        flag = "LOWERBOUND"
-    else:
-        flag = "EXACT"    
-    # store remaining depth (depth is depth_remaining)
-    TT.store(board, depth, m_eval, flag, best_move=best_move)
+	if m_eval <= orig_alpha:
+		flag = "UPPERBOUND"
+	elif m_eval >= orig_beta:
+		flag = "LOWERBOUND"
+	else:
+		flag = "EXACT"    
+	# store remaining depth (depth is depth_remaining)
+	TT.store(board, depth, m_eval, flag, best_move=best_move)
 
-    return m_eval, best_move
+	return m_eval, best_move
      
 # Iterative Deepening
-def iterative_deepening(board: chess.Board, max_depth: int = 50, 
-						time_limit:float = None):
-						
+def iterative_deepening(board: chess.Board, max_depth: int = 50,
+						time_limit:float = None, panic: bool = False):
+	if panic:
+		max_depth = min(max_depth, 4)
+
 	start_time = time.time()
 	# stats.reset()
-	
+
 	best_move = None
 	best_score = -float("inf") 
 	pv = []
 	
-	window = 75
+	window = 75 if not panic else 99999999
 	
 	def time_up():
 		if time_limit is None:
 			return False
 		return (time.time() - start_time) >= time_limit
+	
+	# reduce max depth at endgame situation
+	num_pieces = len(board.piece_map())
+	if num_pieces <= 6: 
+		max_depth = min(max_depth, 10)
 		
 	for depth in range(1, max_depth + 1):
 		if time_up():
@@ -133,15 +167,15 @@ def iterative_deepening(board: chess.Board, max_depth: int = 50,
 			alpha = best_score - window
 			beta = best_score + window
 			
-		score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv)  
+		score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv, panic=panic)  
 		if score <= alpha and not time_up():
 			alpha = -float("inf")
 			beta = float("inf")
-			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv)
+			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv,panic=panic)
 		elif score >= beta and not time_up():
 			alpha = -float("inf")
 			beta = float("inf")
-			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv)
+			score, move = minimax(board, depth, alpha, beta, max_player=board.turn, depth_from_root=0, pv=pv,panic=panic)
 			
 		# I changed how minimax works so it returns the best move itself, so ima comment this out
 		# moves = list(forced_legal_moves(board))
@@ -202,9 +236,9 @@ def iterative_deepening(board: chess.Board, max_depth: int = 50,
 					
 # Quiescence Search					
 def quiescence_search(board: chess.Board, alpha: int, beta: int, maximizing_player,
-						depth_left: int = None) -> int:
+						depth_left: int = None, depth_from_root: int = 0) -> int:
 
-	stand_pat = evaluate(board)
+	stand_pat = evaluate(board, depth_from_root)
 
 	# If a depth limit is provided and exhausted, stop
 	if depth_left is not None and depth_left <= 0:
@@ -264,7 +298,7 @@ def quiescence_search(board: chess.Board, alpha: int, beta: int, maximizing_play
 
 # Move Ordering	
 def order_moves(board: chess.Board, moves: List[chess.Move], 
-				pv_move: Optional[chess.Move] = None) -> List[chess.Move]:
+				pv_move: Optional[chess.Move] = None, depth_from_root: int = 0) -> List[chess.Move]:
 	PIECE_VALUES = {chess.PAWN: 100, 
 					chess.KNIGHT: 320,
 					chess.BISHOP: 330,
@@ -275,6 +309,13 @@ def order_moves(board: chess.Board, moves: List[chess.Move],
 	# transpo table lookup
 	tt_entry = TT.lookup(board)
 	tt_move = tt_entry.best_move if tt_entry else None
+
+	# Extract killer moves for this depth
+
+	if len(board.piece_map()) > 6:
+		km1, km2 = killer_moves[depth_from_root]
+	else:
+		km1, km2 = None, None
 	
 	def score(move: chess.Move) -> int:
 		s = 0
@@ -283,6 +324,10 @@ def order_moves(board: chess.Board, moves: List[chess.Move],
 			
 		if tt_move is not None and move == tt_move:
 			return 1_500_000
+		if km1 is not None and move == km1:
+			return 1_000_000
+		if km2 is not None and move == km2:
+			return 900_000
 			
 		if board.is_capture(move):
 			victim_piece = board.piece_at(move.to_square)
