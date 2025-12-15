@@ -3,7 +3,6 @@ import pytest
 
 from bbsearch import minimax, TT, order_moves, quiescence_search, iterative_deepening
 from forced_chess import forced_legal_moves
-from test_evaluate import evaluate
 from transposition import Transposition_Table
 
 

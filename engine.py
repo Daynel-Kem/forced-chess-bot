@@ -4,8 +4,6 @@ import chess
 
 # from evaluate import evaluate
 from forced_chess import forced_legal_moves
-
-from test_evaluate import evaluate
 from bbsearch import iterative_deepening, TT
 
 MAX_DEPTH = 50
