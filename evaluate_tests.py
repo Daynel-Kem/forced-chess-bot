@@ -152,20 +152,20 @@ def test_mobility_value_with_and_without_captures():
 
 # Test 1: Starting position
 board = chess.Board()
-score = evaluate(board)
+score = evaluate(board, 0)
 print(f"Starting position: {score} (should be close to 0)")
 
 # Test 2: Position where White is up a pawn
 board = chess.Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1")
-score = evaluate(board)
+score = evaluate(board, 0)
 print(f"White up a pawn: {score} (should be ~100+)")
 
 # Test 3: Position where Black is up a queen
 board = chess.Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1")
-score = evaluate(board)
+score = evaluate(board, 0)
 print(f"Black up a queen: {score} (should be very negative)")
 
 # Test 4: Checkmate position
 board = chess.Board("r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")
-score = evaluate(board)
+score = evaluate(board, 0)
 print(f"Black checkmated: {score} (should be ~30000)")
