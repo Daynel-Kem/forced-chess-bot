@@ -197,7 +197,7 @@ class WinBoardEngine:
         # Time Management
         if cmd.startswith("level"):
             _, moves, minutes, inc = cmd.split()
-            self.moves_to_go = int(moves)
+            self.moves_to_go = max(1, int(moves))
             self.increment = int(inc) * 100
             self.my_time = int(minutes) * 60 * 100
             self.opp_time = self.my_time
