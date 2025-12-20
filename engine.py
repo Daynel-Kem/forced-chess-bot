@@ -72,6 +72,8 @@ class WinBoardEngine:
             moves_to_go = 20
         else:
             moves_to_go = max(1, self.moves_to_go)
+            
+        self.moves_to_go = max(1, self.moves_to_go)
 
         time_per_move = min(
             MAX_TIME,
